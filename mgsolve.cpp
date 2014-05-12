@@ -25,18 +25,20 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     NX = NY = pow(2,l)+1;
-    H = 1./(NX-1);
+    H = 2./(NX-1);
 
 
     double* u = new double[NX*NY];
     memset(u,0,sizeof(double)*NY*NX);
 
     //uncomment below if Dirichlet BC
-    initializeGrid(u);
+    //initializeGrid(u);
     
     //uncomment below if Neumann BC
     //initBD(u,NX,NY);
 
+
+    initSemBD(u);
     double* f = new double[NX*NY];
     //uncomment below if Dirichlet BC
     memset(f,0,sizeof(double)*NY*NX);
@@ -235,7 +237,9 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
       {
 	 for (int x=(y%2)+1; x<n_x-1; x+=2)
 	 {
-        u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+		if(y==(n_y-1)/2 && x>=(n_x-1)/2){u[IDX(x,y)]=0.0;}
+		else	
+	        u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
 	 }
       }
       //black
@@ -243,7 +247,9 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
       {
         for (int x=((y+1)%2)+1; x<n_x-1; x+=2)
         {
-            u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+            if(y==(n_y-1)/2 && x>=(n_x-1)/2){u[IDX(x,y)]=0.0;}
+		else	
+		u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
         }
       }
    }
@@ -254,6 +260,28 @@ void initializeGrid(double* u){
 
     for(int i = 0; i < NX; ++i){
         u[(NY-1) * NX + i] = sin(M_PI*i*H) * sinh(M_PI*(NY-1)*H);
+    }
+}
+
+
+void initSemBD(double* u){
+	for(int i = 0; i < NX; ++i){//g(X,Y)= (X^2 + Y^2)^2/3 * sin(1/2atan2(x,y))
+//x-richtung
+		 u[(NY-1) * NX + i] =pow((i*H-1)*(i*H-1)+(1)*(1),3./2.)* sin(0.5*fabs(atan2(1.,(i*H-1.))) );
+		 u[(0) * NX + i] = pow((i*H-1)*(i*H-1)+(-1)*(-1),3./2.)* sin(0.5*fabs(atan2(-1.,(i*H-1.))) );
+		
+//y-richtung		
+		 u[(i) * NX + 0] = pow((-1)*(-1)+(i*H-1)*(i*H-1),3./2.)*sin(0.5*fabs(atan2((i*H-1),-1.)) );
+		 u[(i) * NX + NX-1] = pow((1)*(1)+(i*H-1)*(i*H-1),3./2.)* sin(0.5*fabs(atan2((i*H-1),1.)) );
+ 
+    }
+	for(int i = NX/2; i < NX; ++i){//g(X,Y)= (X^2 + Y^2)^2/3 * sin(1/2atan2(x,y))
+//x-richtung
+		 u[(NY/2) * NX + i] = pow((i*H-1)*(i*H-1)+0,3./2.)* sin(0.5*fabs(atan2(0.,(i*H-1.))) );
+	
+
+
+ 
     }
 }
 
