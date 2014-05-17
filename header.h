@@ -1,0 +1,45 @@
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>
+#include <iomanip>
+#include <math.h>
+#include <time.h>
+#include <sys/time.h>
+#include <stdio.h>
+#include <cstring>
+
+#define _USE_MATH_DEFINES
+
+//Gauss-Seidel-Stencil
+const double GS_HORIZONTAL=1.;
+const double GS_VERTICAL=1.;
+const double GS_CENTER=-4.;
+//restriction Stencil
+const double RES_HORIZONTAL=0.125;
+const double RES_VERTICAL=0.125;
+const double RES_CENTER=0.25;
+const double RES_CORNER=0.0625;
+
+
+#define LEADING_DIM n_x
+#define IDX(i,j) ((j)*(LEADING_DIM)+(i))
+
+static int l; // number of levels
+static int n; // number of V-cycles
+static double H; // meshsize
+static int NX; // grid points in x-direction
+static int NY; // grid points in y-direction
+
+
+void initializeGrid(double* u);
+void save_in_file(const char *str, double *matrix, const int n_x, const int n_y);
+void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const int c);
+void initBD(double* u,const int n_x, const int n_y);
+void residuum(double* res,double* f, double* u, const int n_x,const int n_y);
+void restriction(double* f_co,double* res,const int n_x,const int n_y);
+void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y);
+void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y);
+double calcL2Norm(double *res, int n_x, int n_y);
+void measureError(double* u, double * error);
+void setNMBoundary(double* u,double bdValue,const int n_y,const int n_x);
+void initSemBD(double* u);
