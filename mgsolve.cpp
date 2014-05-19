@@ -1,9 +1,8 @@
 /****************************************************************************
  *                   FAU Erlangen SS14
  *                   Siwir2 Uebung 1 - Elliptic PDE with Multigrid
- *                   written by Lina Gundelwein, Michael Hildebrand,
- *                   Tim Brendel, Lorenz Hufnagel
- *                   April 2014
+ *                   written by Michael Hildebrand, Tim Brendel
+ *                   Mai 2014
  *****************************************************************************/
 
 #include "header.h"
@@ -39,27 +38,10 @@ int main(int argc, char *argv[]) {
     double* res = new double[NY*NX];
     memset(res,0,sizeof(double)*NY*NX);
 
-    double l2norm = 1.;
-    //double l2_old = 0.0;
-
     std::cout<<"Your alias: "<<"broetchen_kinder"<<std::endl;
     struct timeval t0, t;
     gettimeofday(&t0, NULL); 
-	
-    double tol = 9.18e-5;
-    while( l2norm > tol){
-
-        //multigrid steps
-        mgm(u, f, 2, 1, NX, NY);
-
-        residuum(res, f, u, NX, NY);
-
-        // norm and convergence
-        l2norm = calcL2Norm(res, NX, NY);
-        //cout<<"L2 Norm: "<<l2norm<<endl;
-       	//cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
-        //l2_old = l2norm;
-    }
+    solveMG(u, f, res);
 
     gettimeofday(&t, NULL);
     std::cout << "Wall clock time of MG execution: " <<
@@ -86,14 +68,13 @@ void save_in_file(const char *str, double *matrix, const int n_x, const int n_y)
     double hx_local = 2./(n_x-1);
     double hy_local = 2./(n_y-1);
 
-    file << setprecision(12);
+    //file << setprecision(12);
     for(int yi = 0; yi < n_y; ++yi){
         for(int xj = 0; xj < n_x; ++xj){
-            file << xj*hx_local << '\t';
-            file << yi*hy_local << '\t';
-            file << matrix[IDX(xj,yi)] << '\n';
+            file << xj*hx_local - 1.0 << ' ';
+            file << yi*hy_local - 1.0 << ' ';
+            file << matrix[IDX(xj,yi)] << endl;
         }
-
         file << endl;
     }
     file.close();
@@ -415,4 +396,17 @@ double polar(const double x, const double y){
 	return phi;
 }
 
-
+void solveMG(double *u, double *f, double *res){
+	double l2norm = 1.;
+	double tol = 9.18e-5;
+	while(l2norm > tol){
+		//multigrid steps
+		mgm(u, f, 2, 1, NX, NY);
+		residuum(res, f, u, NX, NY);
+		// norm and convergence
+		l2norm = calcL2Norm(res, NX, NY);
+		//cout<<"L2 Norm: "<<l2norm<<endl;
+		//cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
+		//l2_old = l2norm;
+	}
+}
