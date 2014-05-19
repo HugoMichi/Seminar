@@ -12,15 +12,14 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 3) {
+    if (argc != 2) {
         cerr<<"error: wrong number of arguments"<<endl;
-        cout<<"call ./mgsolve l n "<<endl;
-        cout<<"l: number of levels; n: numer of V-cycles"<<endl;
+        cout<<"call ./mgsolve l"<<endl;
+        cout<<"l: number of levels"<<endl;
         exit(EXIT_FAILURE);
     }
     l = atoi(argv[1]);
-    n = atoi(argv[2]);
-    if(l<1 || n<3 || l>17){
+    if(l<3 || l>17){
         cerr<<"error: arguments out of range"<<endl;
         exit(EXIT_FAILURE);
     }
@@ -31,34 +30,24 @@ int main(int argc, char *argv[]) {
     double* u = new double[NX*NY];
     memset(u,0,sizeof(double)*NY*NX);
 
-    //uncomment below if Dirichlet BC
-    //initializeGrid(u);
-    
-    //uncomment below if Neumann BC
-    //initBD(u,NX,NY);
+    init_polar(u, NX, NY);
+    save_in_file("init.dat", u, NX, NY);
 
-
-    initSemBD(u);
     double* f = new double[NX*NY];
-    //uncomment below if Dirichlet BC
     memset(f,0,sizeof(double)*NY*NX);
-
-    //uncomment below if Neumann BC
-    //for (int i=0;i<NX*NY;i++)
-    //  f[i] = 2.;
 
     double* res = new double[NY*NX];
     memset(res,0,sizeof(double)*NY*NX);
 
-    double l2norm = 0.;
-    double l2_old = 1.;
+    double l2norm = 1.;
+    //double l2_old = 0.0;
 
-    // time measurements
-    struct timeval start, end;
-    long seconds, useconds;
-    gettimeofday(&start, NULL); 
-
-    for(int i=0; i<n; i++){ 
+    std::cout<<"Your alias: "<<"broetchen_kinder"<<std::endl;
+    struct timeval t0, t;
+    gettimeofday(&t0, NULL); 
+	
+    double tol = 9.18e-5;
+    while( l2norm > tol){
 
         //multigrid steps
         mgm(u, f, 2, 1, NX, NY);
@@ -67,36 +56,21 @@ int main(int argc, char *argv[]) {
 
         // norm and convergence
         l2norm = calcL2Norm(res, NX, NY);
-        cout<<"L2 Norm: "<<l2norm<<endl;
-        cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
-        l2_old = l2norm;
+        //cout<<"L2 Norm: "<<l2norm<<endl;
+       	//cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
+        //l2_old = l2norm;
     }
 
-    gettimeofday(&end, NULL);
-    seconds = end.tv_sec - start.tv_sec;
-    useconds = end.tv_usec - start.tv_usec;
-    if(useconds<0){
-        useconds += 1000000;
-        seconds--;
-    }
-    cout<<"Duration: "<<seconds<<" sec "<<useconds<<" usec"<<endl;
+    gettimeofday(&t, NULL);
+    std::cout << "Wall clock time of MG execution: " <<
+      ((int64_t)(t.tv_sec - t0.tv_sec) * (int64_t)1000000 +
+      (int64_t)t.tv_usec - (int64_t)t0.tv_usec) * 1e-3 
+      << " ms" << std::endl;
 
+    save_in_file("solution.dat", u, NX, NY);
     delete[] res;
     delete[] f;
-
-    double* error = new double[NX*NY]; 
-    save_in_file("solution.txt", u, NX, NY);
-    
-    measureError(u, error);
-    char filename[13];
-    sprintf(filename, "error%u.txt", NX-1);
-    save_in_file(filename, error, NX, NY);
-
-    double errorSum = calcL2Norm(error, NX, NY);
-    cout<<"1/"<<NX-1<<": \n"<<errorSum<<endl;
-    
     delete[] u;
-    delete[] error;
     exit(EXIT_SUCCESS);
 }
 
@@ -109,8 +83,8 @@ void save_in_file(const char *str, double *matrix, const int n_x, const int n_y)
         printf("%p konnte nicht gespeichert werden\n", str);
         exit(1);
     }
-    double hx_local = 1./(n_x-1);
-    double hy_local = 1./(n_y-1);
+    double hx_local = 2./(n_x-1);
+    double hy_local = 2./(n_y-1);
 
     file << setprecision(12);
     for(int yi = 0; yi < n_y; ++yi){
@@ -255,15 +229,6 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
    }
 }
 
-
-void initializeGrid(double* u){
-
-    for(int i = 0; i < NX; ++i){
-        u[(NY-1) * NX + i] = sin(M_PI*i*H) * sinh(M_PI*(NY-1)*H);
-    }
-}
-
-
 void initSemBD(double* u){
 	for(int i = 0; i < NX; ++i){//g(X,Y)= (X^2 + Y^2)^2/3 * sin(1/2atan2(x,y))
 //x-richtung
@@ -283,20 +248,6 @@ void initSemBD(double* u){
 
  
     }
-}
-
-
-void initBD(double* u,const int n_x, const int n_y){
-
-   double hx = 1./double(n_x-1);
-   for(int i=0; i<n_x; ++i)
-   {
-      u[IDX(i,0)] = i*hx*(1.-i*hx);
-      u[IDX(i,n_y-1)] = i*hx*(1.-i*hx);
-   }
-
-   //uncomment if Neumann BCs
-   //setNMBoundary(u,-1.,n_y,n_x);
 }
 
 
@@ -327,18 +278,6 @@ void restriction(double* f_co, double* res, const int n_x, const int n_y){
                         res[IDX(2*i-1,2*j+1)]+ res[IDX(2*i+1,2*j+1)]);
         }
     }
-}
-
-
-// sets NeumanBoundaries at the left and right boundary
-void setNMBoundary(double* u, double bdValue, const int n_y, const int n_x){
-
-   double hy = 1./double(n_y-1);
-   for (int y=1;y<n_y-1;y++)
-   {
-      u[IDX(0,y)] = u[IDX(1,y)]+hy*bdValue;
-      u[IDX(n_x-1,y)] = u[IDX(n_x-2,y)]+hy*bdValue;
-   }
 }
 
 
@@ -404,15 +343,18 @@ void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
 
     for(int j=1;j<n_y-1;j++){
         for(int i=1;i<n_x-1;i++){
-            res[IDX(i,j)] =  // f-Au
-                f[IDX(i,j)] -
-                (1./(hx_local*hy_local))*
-                (4.*u[IDX(i,j)]
-                 - u[IDX( i ,j-1)]
-                 - u[IDX( i ,j+1)]
-                 - u[IDX(i+1, j )]
-                 - u[IDX(i-1, j )])
-                ;
+		if(j==(n_y-1)/2 && i>=(n_x-1)/2){
+			res[IDX(i,j)] = 0.0;
+		}
+		else	
+            		res[IDX(i,j)] =  // f-Au
+                	  f[IDX(i,j)] -
+                	    (1./(hx_local*hy_local))*
+                	    (4.*u[IDX(i,j)]
+                	     - u[IDX( i ,j-1)]
+                	     - u[IDX( i ,j+1)]
+                	     - u[IDX(i+1, j )]
+                	     - u[IDX(i-1, j )]);
         }
     }
 }
@@ -430,17 +372,47 @@ double calcL2Norm(double *res, int n_x, int n_y){
 }
 
 
-void measureError(double *u, double *error){
+void init_polar(double *u, const int n_x, const int n_y){
 
-    double h = 1./(NX-1);
-    for(int j = 0; j<NY; ++j){
-        for(int i = 0; i < NX; ++i){
-            //uncomment below for Dirichlet BCs
-            error[j*NX+i] =  u[j*NX+i]-sin(M_PI*i*h)*sinh(M_PI*j*h);
+	double h_x = H;
+	double h_y = H;
+	//quadratisches Grid, also NX == NY
+	for(int i = 0; i<NX; ++i){
+		//0-te Spalte = linker Rand
+		//compute with coordinates in x/y direction
+		double x = -1.;
+		double y = i * h_y - 1.;
+		u[IDX(0,i)] = pow((x*x + y*y), (1./4.)) * sin(polar(x,y)/2.);
+		
+		//(NX-1)-te Spalte = rechter Rand
+		x = (NX-1) * h_x - 1.;
+		y = i * h_y -1.;
+		u[IDX(NX-1,i)] = pow((x*x + y*y), (1./4.)) * sin(polar(x,y)/2.);
 
-            //uncomment below for Neumann BCs
-            //error[j*NX+i] =  u[j*NX+i]-(i*h)*(1-i*h);
-        }
-    }
+		//0-te Zeile = unterer Rand
+		x = i * h_x - 1.;
+		y = 0. - 1.;
+		u[IDX(i,0)] = pow((x*x + y*y), (1./4.)) * sin(polar(x,y)/2.);
+ 
+		//(NY-1)-te Zeile = oberer Rand
+		x = i * h_x - 1.;
+		y = (NY-1) * h_y - 1.;
+		u[IDX(i, NY-1)] = pow((x*x + y*y), (1./4.)) * sin(polar(x,y)/2.);
+
+		//mittlere Zeile bei x = 0;
+		//NX und NY immer ungerade
+		u[IDX(NX/2 + i%(NY/2 + 1), NY/2)] = 0.;
+		//zweimal reinschreiben oder immer if-Abrage?
+	}
 }
+
+
+double polar(const double x, const double y){
+	
+	double phi = atan2(y,x);
+	if(y < 0)
+		phi += (2*M_PI);
+	return phi;
+}
+
 

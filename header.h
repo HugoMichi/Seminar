@@ -21,11 +21,11 @@ const double RES_CENTER=0.25;
 const double RES_CORNER=0.0625;
 
 
-#define LEADING_DIM n_x
+#define LEADING_DIM n_x 
 #define IDX(i,j) ((j)*(LEADING_DIM)+(i))
 
 static int l; // number of levels
-static int n; // number of V-cycles
+//static int n; // number of V-cycles
 static double H; // meshsize
 static int NX; // grid points in x-direction
 static int NY; // grid points in y-direction
@@ -43,3 +43,5 @@ double calcL2Norm(double *res, int n_x, int n_y);
 void measureError(double* u, double * error);
 void setNMBoundary(double* u,double bdValue,const int n_y,const int n_x);
 void initSemBD(double* u);
+double polar(const double x, const double y);
+void init_polar(double *u, const int n_x, const int n_y);

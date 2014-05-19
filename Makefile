@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS ?= -ansi -Winline -Wshadow -Wall -O3 -ggdb
-SOURCES = mgsolve.cpp
-OBJECTS = mgsolve.o
+SOURCES = mgsolve.cpp 
+OBJECTS = mgsolve.o 
 HEADERS = header.h
 LIBS = -lm
 
@@ -18,5 +18,5 @@ mgsolve: ${OBJECTS}
 	${CXX} -o $@ ${OBJECTS} ${LIBS}
 
 clean:
-	rm -f *.o *~ *.txt mgsolve
+	rm -f *.o *~ *.txt mgsolve *.dat
 
