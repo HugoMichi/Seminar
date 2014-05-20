@@ -24,12 +24,13 @@ int main(int argc, char *argv[]) {
     }
     NX = NY = pow(2,l)+1;
     H = 2./(NX-1);
-
+    string your_alias= "broetchen_kinder";
 
     double* u = new double[NX*NY];
     memset(u,0,sizeof(double)*NY*NX);
 
     init_polar(u, NX, NY);
+    //initSemBD(u);
     save_in_file("init.dat", u, NX, NY);
 
     double* f = new double[NX*NY];
@@ -38,16 +39,18 @@ int main(int argc, char *argv[]) {
     double* res = new double[NY*NX];
     memset(res,0,sizeof(double)*NY*NX);
 
-    std::cout<<"Your alias: "<<"broetchen_kinder"<<std::endl;
-    struct timeval t0, t;
-    gettimeofday(&t0, NULL); 
-    solveMG(u, f, res);
 
+
+
+    std::cout<<"Your Alias: "<<your_alias<<std::endl;
+    struct timeval t0, t;
+    gettimeofday(&t0, NULL);
+    solveMG(u, f, res);
     gettimeofday(&t, NULL);
     std::cout << "Wall clock time of MG execution: " <<
-      ((int64_t)(t.tv_sec - t0.tv_sec) * (int64_t)1000000 +
-      (int64_t)t.tv_usec - (int64_t)t0.tv_usec) * 1e-3 
-      << " ms" << std::endl;
+    ((int64_t)(t.tv_sec - t0.tv_sec) * (int64_t)1000000 +
+    (int64_t)t.tv_usec - (int64_t)t0.tv_usec) * 1e-3
+    << " ms" << std::endl;
 
     save_in_file("solution.dat", u, NX, NY);
     delete[] res;
@@ -69,13 +72,15 @@ void save_in_file(const char *str, double *matrix, const int n_x, const int n_y)
     double hy_local = 2./(n_y-1);
 
     //file << setprecision(12);
-    for(int yi = 0; yi < n_y; ++yi){
-        for(int xj = 0; xj < n_x; ++xj){
+      for(int yi =0 ; yi <n_y ; ++yi){
+         for(int xj =0 ; xj <n_x ; ++xj){
+
             file << xj*hx_local - 1.0 << ' ';
             file << yi*hy_local - 1.0 << ' ';
+
             file << matrix[IDX(xj,yi)] << endl;
         }
-        file << endl;
+        //file << endl;
     }
     file.close();
 }
@@ -249,6 +254,8 @@ void restriction(double* f_co, double* res, const int n_x, const int n_y){
         f_co[(Ny_co-1)*Nx_co+i] = res[IDX(2*i,n_y-1)];
     }
 
+
+
     for(int j=1;j<Ny_co-1;j++){
         for(int i=1;i<Nx_co-1;i++){
             f_co[j*Nx_co+i] =
@@ -259,6 +266,10 @@ void restriction(double* f_co, double* res, const int n_x, const int n_y){
                         res[IDX(2*i-1,2*j+1)]+ res[IDX(2*i+1,2*j+1)]);
         }
     }
+   /*for(int i=(Nx_co-1)/2; i<Nx_co;i++){
+        f_co[((Ny_co-1)/2)*Nx_co+i] = res[IDX(2*i,(Ny_co-1)/2)];
+    }*/
+
 }
 
 
@@ -324,10 +335,10 @@ void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
 
     for(int j=1;j<n_y-1;j++){
         for(int i=1;i<n_x-1;i++){
-		if(j==(n_y-1)/2 && i>=(n_x-1)/2){
+        if(j==(n_y-1)/2 && i>=(n_x-1)/2){
 			res[IDX(i,j)] = 0.0;
 		}
-		else	
+        else
             		res[IDX(i,j)] =  // f-Au
                 	  f[IDX(i,j)] -
                 	    (1./(hx_local*hy_local))*
