@@ -25,12 +25,38 @@ int main(int argc, char *argv[]) {
     NX = NY = pow(2,l)+1;
     H = 2./(NX-1);
     string your_alias= "broetchen_kinder";
+    
+    
+    
+    
+    
+//     int id;
+    
+     omp_set_num_threads(4);
+//       #pragma omp parallel //private (id)
+//  	 {
+     //for(int i = 0; i<4; ++i){
+//        id = omp_get_thread_num();
+//        cout<<"ich bin thread no. "<<id<<endl;
+//        if(id ==0)
+//  	cout<<"es sind "<<omp_get_num_threads()<<" threads aktiv"<<endl;
+//      }
+//      cout<<endl;
+// 	 }
+    
+	 
+
+    
+    
+    
+    
+    
 
     double* u = new double[NX*NY];
     memset(u,0,sizeof(double)*NY*NX);
 
     init_polar(u, NX, NY);
-    //initSemBD(u);
+//     initSemBD(u);
     save_in_file("init.dat", u, NX, NY);
 
     double* f = new double[NX*NY];
@@ -38,14 +64,14 @@ int main(int argc, char *argv[]) {
 
     double* res = new double[NY*NX];
     memset(res,0,sizeof(double)*NY*NX);
-
-
-
+    
 
     std::cout<<"Your Alias: "<<your_alias<<std::endl;
     struct timeval t0, t;
     gettimeofday(&t0, NULL);
     solveMG(u, f, res);
+		 //cool smoothing; smooth cooling
+// 	 do_gauss_seidel(u,f,NX,NY,1);
     gettimeofday(&t, NULL);
     std::cout << "Wall clock time of MG execution: " <<
     ((int64_t)(t.tv_sec - t0.tv_sec) * (int64_t)1000000 +
@@ -188,11 +214,13 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
 
 
 void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const int c){
+	
+// 	if( n_x <= 257 || n_y <= 257)	omp_set_num_threads(1);
 
-   double h = 1./(n_x-1);
-
+	double h = 1./(n_x-1);
    for(int it=0; it<c; ++it){
       //red
+       #pragma omp parallel for
       for (int y=1; y<n_y-1; y++)
       {
 	 for (int x=(y%2)+1; x<n_x-1; x+=2)
@@ -203,6 +231,7 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
 	 }
       }
       //black
+       #pragma omp parallel for
       for (int y=1; y<n_y-1; y++)
       {
         for (int x=((y+1)%2)+1; x<n_x-1; x+=2)
@@ -244,18 +273,21 @@ void restriction(double* f_co, double* res, const int n_x, const int n_y){
     int Ny_co=(n_y/2)+1;
 
     //x=0(left border) und x=1(right border)
+//     #pragma omp parallel for
     for(int j=0; j<Ny_co;j++){
         f_co[j*Nx_co+0] = res[IDX(0,2*j)];
         f_co[j*Nx_co+Nx_co-1] = res[IDX(n_x-1,2*j)];
     }
     //y=0(lower border) und y=1(upper border)
+//     #pragma omp parallel for
     for(int i=0; i<Nx_co;i++){
         f_co[0*Nx_co+i] = res[IDX(2*i,0)];
         f_co[(Ny_co-1)*Nx_co+i] = res[IDX(2*i,n_y-1)];
     }
 
 
-
+//     #pragma omp parallel for
+    //wird langsamer fuer 4, 8, 16  threads
     for(int j=1;j<Ny_co-1;j++){
         for(int i=1;i<Nx_co-1;i++){
             f_co[j*Nx_co+i] =
@@ -274,7 +306,7 @@ void restriction(double* f_co, double* res, const int n_x, const int n_y){
 
 
 //recursive multigrid function
-void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
+void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y, int gamma){
 
     //Pre-smoothing
     do_gauss_seidel(u,f,n_x,n_y,v1);
@@ -315,8 +347,10 @@ void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y){
     else
     {
         //recursive call
-        mgm(c_co, f_co, v1, v2, Nx_co ,Ny_co);
-        delete[] f_co;
+		for(int i = 0; i<gamma; ++i){
+			mgm(c_co, f_co, v1, v2, Nx_co ,Ny_co, gamma);
+		}
+		delete[] f_co;
     }
 
     prolongation(c_co, u, n_x, n_y);
@@ -332,29 +366,35 @@ void residuum(double* res,double* f, double* u, const int n_x,const int n_y){
 
     double hx_local = 1./(n_x-1);
     double hy_local = 1./(n_y-1);
-
-    for(int j=1;j<n_y-1;j++){
+    
+    #pragma omp parallel for
+    for(int j=1; j<n_y-1; j++){
         for(int i=1;i<n_x-1;i++){
-        if(j==(n_y-1)/2 && i>=(n_x-1)/2){
-			res[IDX(i,j)] = 0.0;
+// 			if(j==(n_y-1)/2 && i>=(n_x-1)/2){
+// 				res[IDX(i,j)] = 0.0;
+// 			}else{
+				res[IDX(i,j)] =  // f-Au
+               	  f[IDX(i,j)] -
+               	    (1./(hx_local*hy_local))*
+               	    (4.*u[IDX(i,j)]
+               	     - u[IDX( i ,j-1)]
+               	     - u[IDX( i ,j+1)]
+               	     - u[IDX(i+1, j )]
+               	     - u[IDX(i-1, j )]);
+// 			}
 		}
-        else
-            		res[IDX(i,j)] =  // f-Au
-                	  f[IDX(i,j)] -
-                	    (1./(hx_local*hy_local))*
-                	    (4.*u[IDX(i,j)]
-                	     - u[IDX( i ,j-1)]
-                	     - u[IDX( i ,j+1)]
-                	     - u[IDX(i+1, j )]
-                	     - u[IDX(i-1, j )]);
-        }
     }
+#pragma omp parallel for
+    for(int i = (n_x-1)/2; i<n_x-1;i++){
+		res[IDX(i,(n_y-1)/2)] = 0.;
+	}
 }
 
 
 double calcL2Norm(double *res, int n_x, int n_y){
 
     double norm = 0.;
+//     #pragma omp parallel for reduction(+: norm)
     for(int j = 0; j<n_y; ++j){
         for(int i = 0 ; i<n_x; ++i){
             norm += res[IDX(i,j)]*res[IDX(i,j)];
@@ -369,7 +409,9 @@ void init_polar(double *u, const int n_x, const int n_y){
 	double h_x = H;
 	double h_y = H;
 	//quadratisches Grid, also NX == NY
-	for(int i = 0; i<NX; ++i){
+      //  #pragma omp parallel for
+	//kein unterschied ob ohne pragma, mit 
+	for(int i = 0; i<NX; ++i){  
 		//0-te Spalte = linker Rand
 		//compute with coordinates in x/y direction
 		double x = -1.;
@@ -408,15 +450,16 @@ double polar(const double x, const double y){
 }
 
 void solveMG(double *u, double *f, double *res){
-	double l2norm = 1.;
-	double tol = 9.18e-5;
-	while(l2norm > tol){
+// 	double l2norm = 1.;
+// 	double tol = 9.18e-5;
+// 	while(l2norm > tol){
+	for(int i = 0; i<7; ++i){
 		//multigrid steps
-		mgm(u, f, 2, 1, NX, NY);
-		residuum(res, f, u, NX, NY);
+		mgm(u, f, 2, 1, NX, NY,2);
+// 		residuum(res, f, u, NX, NY);
 		// norm and convergence
-		l2norm = calcL2Norm(res, NX, NY);
-		//cout<<"L2 Norm: "<<l2norm<<endl;
+// 		l2norm = calcL2Norm(res, NX, NY);
+// 		cout<<"L2 Norm: "<<l2norm<<endl;
 		//cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
 		//l2_old = l2norm;
 	}

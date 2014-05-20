@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
@@ -37,7 +38,7 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
 void initBD(double* u,const int n_x, const int n_y);
 void residuum(double* res,double* f, double* u, const int n_x,const int n_y);
 void restriction(double* f_co,double* res,const int n_x,const int n_y);
-void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y);
+void mgm(double* u,double* f,int v1,int v2,int n_x, int n_y, int gamma);
 void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y);
 double calcL2Norm(double *res, int n_x, int n_y);
 void measureError(double* u, double * error);
@@ -45,3 +46,4 @@ void setNMBoundary(double* u,double bdValue,const int n_y,const int n_x);
 void initSemBD(double* u);
 double polar(const double x, const double y);
 void init_polar(double *u, const int n_x, const int n_y);
+void solveMG(double *u, double *f, double *res);
