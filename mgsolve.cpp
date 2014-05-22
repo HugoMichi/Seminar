@@ -219,7 +219,7 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
 
 	double h = 1./(n_x-1);
    for(int it=0; it<c; ++it){
-      //red
+/*     //red
        #pragma omp parallel for
       for (int y=1; y<n_y-1; y++)
       {
@@ -240,6 +240,41 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
 		else	
 		u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
         }
+      }
+*/   
+      //all red points of 1st row
+      for (int x=2; x<n_x-1; x+=2)
+      {
+        u[IDX(x,1)] = 1.0/4.0 * (h*h*f[IDX(x,1)] + (u[IDX(x,0)] + u[IDX(x,2)] + u[IDX(x-1,1)] + u[IDX(x+1,1)]));
+
+      }
+      //dann
+      //bla--red--bla 
+      //red--bla--red
+      //bla--red--bla
+ 
+      for (int y=2; y<n_y-1; y++)
+      {
+	 for (int x=(y%2)+1; x<n_x-1; x+=2)
+	 {
+           if(y==(n_y-1)/2 && x>=(n_x-1)/2){u[IDX(x,y)]=0.0;}
+           else{
+           //red
+           u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
+           }
+           if(y==((n_y-1)/2-1) && x>=(n_x-1)/2){u[IDX(x,y-1)]=0.0;}
+           else{
+
+           //black
+           u[IDX(x,y-1)] = 1.0/4.0 * (h*h*f[IDX(x,y-1)] + (u[IDX(x,y-2)] + u[IDX(x,y)] + u[IDX(x-1,y-1)] + u[IDX(x+1,y-1)]));
+          }
+        }
+      }
+      //all black points of last row
+      for(int x=1; x<n_x-1; x+=2) //wegen ungeradem gridsize x=1  <=>  x=((y+1)%2)+1
+      {
+        u[IDX(x,n_y-2)] = 1.0/4.0 * (h*h*f[IDX(x,n_y-2)] + (u[IDX(x,n_y-3)] + u[IDX(x,n_y-1)] + u[IDX(x-1,n_y-2)] + u[IDX(x+1,n_y-2)]));
+
       }
    }
 }
