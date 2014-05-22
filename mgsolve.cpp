@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     
 //     int id;
     
-     omp_set_num_threads(4);
+    // omp_set_num_threads(4);
 //       #pragma omp parallel //private (id)
 //  	 {
      //for(int i = 0; i<4; ++i){
@@ -118,7 +118,7 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
    int Nx_co=(n_x/2)+1;
    int Ny_co=(n_y/2)+1;
 
-   /*
+      #pragma omp parallel for
       for(int j = 0; j < Ny_co-1; ++j)
       {
       for(int i = 0; i < Nx_co-1; ++i)
@@ -130,10 +130,10 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
       u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * (u_co[j * Nx_co+ i] + u_co[(j+1) * Nx_co+i]+ u_co[j * Nx_co+ i+1]+ u_co[(j+1) * Nx_co+ i+1]);
       } 
       }
-      */
+
 
    //set four courners
-   int i=0;
+  /* int i=0;
    int j=0;
    double center = u_co[j * Nx_co+ i];
    u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * center;
@@ -209,7 +209,7 @@ void prolongation(double *u_co, double *u_fi, const int n_x, const int n_y){
 	 u_fi[IDX(2*i-1,2*j-1)] 	+= 1./4. * center;
 	 u_fi[IDX(2*i+1,2*j+1)] 	+= 1./4. * center;
       } 
-   }
+   }*/
 }
 
 
@@ -242,7 +242,10 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
         }
       }
 */   
+      //#pragma omp parallel
+      // {
       //all red points of 1st row
+      //#pragma omp for
       for (int x=2; x<n_x-1; x+=2)
       {
         u[IDX(x,1)] = 1.0/4.0 * (h*h*f[IDX(x,1)] + (u[IDX(x,0)] + u[IDX(x,2)] + u[IDX(x-1,1)] + u[IDX(x+1,1)]));
@@ -255,6 +258,7 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
  
       for (int y=2; y<n_y-1; y++)
       {
+     //#pragma omp parallel for
 	 for (int x=(y%2)+1; x<n_x-1; x+=2)
 	 {
            if(y==(n_y-1)/2 && x>=(n_x-1)/2){u[IDX(x,y)]=0.0;}
@@ -262,7 +266,7 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
            //red
            u[IDX(x,y)] = 1.0/4.0 * (h*h*f[IDX(x,y)] + (u[IDX(x,y-1)] + u[IDX(x,y+1)] + u[IDX(x-1,y)] + u[IDX(x+1,y)]));
            }
-           if(y==((n_y-1)/2-1) && x>=(n_x-1)/2){u[IDX(x,y-1)]=0.0;}
+           if(y==((n_y-1)/2+1) && x>=(n_x-1)/2){u[IDX(x,y-1)]=0.0;}
            else{
 
            //black
@@ -271,12 +275,14 @@ void do_gauss_seidel(double *u, double *f, const int n_x, const int n_y, const i
         }
       }
       //all black points of last row
+     // #pragma omp for
       for(int x=1; x<n_x-1; x+=2) //wegen ungeradem gridsize x=1  <=>  x=((y+1)%2)+1
       {
         u[IDX(x,n_y-2)] = 1.0/4.0 * (h*h*f[IDX(x,n_y-2)] + (u[IDX(x,n_y-3)] + u[IDX(x,n_y-1)] + u[IDX(x-1,n_y-2)] + u[IDX(x+1,n_y-2)]));
 
       }
    }
+   //}
 }
 
 void initSemBD(double* u){
@@ -485,17 +491,19 @@ double polar(const double x, const double y){
 }
 
 void solveMG(double *u, double *f, double *res){
-// 	double l2norm = 1.;
-// 	double tol = 9.18e-5;
-// 	while(l2norm > tol){
-	for(int i = 0; i<7; ++i){
+    /*int count=0;
+    double l2norm = 1.;
+    double tol = 9.18e-5;*/
+   // while(l2norm > tol){
+    for(int i = 0; i<5; ++i){
 		//multigrid steps
-		mgm(u, f, 2, 1, NX, NY,2);
-// 		residuum(res, f, u, NX, NY);
+        mgm(u, f, 1, 1, NX, NY,2);
+        //residuum(res, f, u, NX, NY);
 		// norm and convergence
-// 		l2norm = calcL2Norm(res, NX, NY);
-// 		cout<<"L2 Norm: "<<l2norm<<endl;
+        //l2norm = calcL2Norm(res, NX, NY);
+        //cout<<"L2 Norm: "<<l2norm<<endl;
 		//cout<<"Convergence rate: "<< l2norm / l2_old <<endl;
 		//l2_old = l2norm;
-	}
+       // count++;
+    }//cout<<"scleifen: "<<count<<endl;
 }
